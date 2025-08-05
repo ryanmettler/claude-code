@@ -70,21 +70,20 @@ for domain in \
     "api.openai.com" \
     "sentry.io" \
     "statsig.anthropic.com" \
-    "statsig.com"; do
+    "statsig.com" \
+    "ep-summer-butterfly-a26u7afp.eu-central-1.aws.neon.tech" \
+    "neon.tech"; do
     echo "Resolving $domain..."
-    ips=$(dig +short A "$domain")
+    # Use dig +short without specifying A to get CNAME chains, then filter for IPs
+    ips=$(dig +short "$domain" | grep -E '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$')
     if [ -z "$ips" ]; then
-        echo "ERROR: Failed to resolve $domain"
+        echo "ERROR: Failed to resolve $domain to IP addresses"
         exit 1
     fi
     
     while read -r ip; do
-        if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-            echo "ERROR: Invalid IP from DNS for $domain: $ip"
-            exit 1
-        fi
         echo "Adding $ip for $domain"
-        ipset add allowed-domains "$ip"
+        ipset add allowed-domains "$ip" 2>/dev/null || echo "  (IP $ip already in set)"
     done < <(echo "$ips")
 done
 
